@@ -5,42 +5,31 @@ import threading
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-TOKEN = os.getenv("TOKEN")
+# ===== FORCE CLEAN TOKEN =====
+TOKEN = os.getenv("TOKEN").strip()
 CHAT_ID = os.getenv("CHAT_ID")
 
-# ===== PRICE (WITH BACKUP) =====
+
+# ===== PRICE =====
 def get_price():
     try:
-        url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
-        res = requests.get(url, timeout=5).json()
-
-        if "price" in res:
-            return float(res["price"])
+        res = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", timeout=5).json()
+        return float(res["price"])
     except:
-        pass
-
-    try:
-        url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-        res = requests.get(url, timeout=5).json()
-        return float(res["bitcoin"]["usd"])
-    except:
-        return None
+        try:
+            res = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd", timeout=5).json()
+            return float(res["bitcoin"]["usd"])
+        except:
+            return None
 
 
-# ===== RSI (STABLE) =====
+# ===== RSI =====
 def get_rsi():
     try:
-        url = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=50"
-        data = requests.get(url, timeout=5).json()
-
-        if not isinstance(data, list):
-            return 50
-
+        data = requests.get("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=50").json()
         closes = [float(x[4]) for x in data]
 
-        gains = []
-        losses = []
-
+        gains, losses = [], []
         for i in range(1, len(closes)):
             diff = closes[i] - closes[i-1]
             gains.append(max(diff, 0))
@@ -54,7 +43,6 @@ def get_rsi():
 
         rs = avg_gain / avg_loss
         return round(100 - (100 / (1 + rs)), 2)
-
     except:
         return 50
 
@@ -62,21 +50,14 @@ def get_rsi():
 # ===== EMA =====
 def get_ema():
     try:
-        url = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=20"
-        data = requests.get(url, timeout=5).json()
-
-        if not isinstance(data, list):
-            return None
-
+        data = requests.get("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=20").json()
         closes = [float(x[4]) for x in data]
-
         return round(sum(closes[-9:]) / 9, 2)
-
     except:
         return None
 
 
-# ===== SIGNAL LOGIC =====
+# ===== SIGNAL =====
 def get_signal(price, rsi, ema):
     if price is None:
         return "⚠️ ERROR", "Market data unavailable"
@@ -103,12 +84,11 @@ def build_message():
     ema = get_ema()
 
     if price is None:
-        return "⚠️ Market data unavailable (retrying...)"
+        return "⚠️ Data fetch failed"
 
     signal, reason = get_signal(price, rsi, ema)
 
-    return f"""
-🤖 JARVIS REPORT
+    return f"""🤖 JARVIS REPORT
 
 📊 Price: {price}
 📉 RSI: {rsi}
@@ -119,28 +99,26 @@ def build_message():
 """
 
 
-# ===== JARVIS BRAIN =====
+# ===== JARVIS AI =====
 def jarvis_reply(text):
     text = text.lower()
 
     if "buy" in text:
-        return "🧠 Jarvis: Buy when RSI low & price above EMA. Avoid FOMO."
+        return "🧠 Jarvis: Buy only when RSI low & trend strong."
 
     if "sell" in text:
-        return "🧠 Jarvis: Sell when RSI high & trend weak."
+        return "🧠 Jarvis: Sell when market weak or overbought."
 
     if "safe" in text:
-        return "🧠 Jarvis: No trade is safest trade. Wait for confirmation."
+        return "🧠 Jarvis: No trade = safest trade."
 
-    if "what can i do" in text:
-        return "🧠 Jarvis: Wait for strong signal. Market is not clear yet."
-
-    return "🧠 Jarvis: Discipline > Emotion. Wait for the right setup."
+    return "🧠 Jarvis: Discipline > Emotion."
 
 
-# ===== TELEGRAM HANDLERS =====
+# ===== HANDLERS =====
 def start(update: Update, context: CallbackContext):
-    update.message.reply_text("🤖 Jarvis Activated!\nAsk me anything.")
+    update.message.reply_text("🤖 Jarvis Activated!")
+
 
 def handle(update: Update, context: CallbackContext):
     report = build_message()
@@ -149,7 +127,7 @@ def handle(update: Update, context: CallbackContext):
     update.message.reply_text(report + "\n\n" + advice)
 
 
-# ===== AUTO TRADER =====
+# ===== AUTO ALERT =====
 def auto_trader(bot):
     last_alert = ""
 
@@ -167,12 +145,10 @@ def auto_trader(bot):
 
             key = f"{signal}-{round(price)}"
 
-            # send only strong alerts once
             if "STRONG" in signal and key != last_alert:
                 bot.send_message(
                     chat_id=CHAT_ID,
-                    text=f"""
-🔥 JARVIS ALERT 🔥
+                    text=f"""🔥 JARVIS ALERT 🔥
 
 📊 Price: {price}
 📉 RSI: {rsi}
@@ -185,7 +161,7 @@ def auto_trader(bot):
                 last_alert = key
 
         except:
-            pass  # no spam
+            pass
 
         time.sleep(60)
 
