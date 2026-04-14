@@ -5,13 +5,11 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 
 TOKEN = os.getenv("TOKEN")
 
-# BTC price
 def get_price():
     url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
     data = requests.get(url).json()
     return float(data["price"])
 
-# Signal logic
 def get_signal(price):
     if price > 75000:
         return "BUY", "Breakout above resistance"
@@ -20,25 +18,28 @@ def get_signal(price):
     else:
         return "WAIT", "Market sideways"
 
-# /start
 def start(update: Update, context: CallbackContext):
     update.message.reply_text("🚀 TradeMind Bot Active!\nType anything to get signal.")
 
-# reply to any message
 def handle_message(update: Update, context: CallbackContext):
-    price = get_price()
-    signal, reason = get_signal(price)
+    try:
+        price = get_price()
+        signal, reason = get_signal(price)
 
-    message = f"BTC Price: {price}\nSignal: {signal}\nReason: {reason}"
-    update.message.reply_text(message)
+        message = f"""📊 BTC Price: {price}
+📈 Signal: {signal}
+🧠 Reason: {reason}"""
 
-# setup
+        update.message.reply_text(message)
+
+    except Exception as e:
+        update.message.reply_text("Error occurred")
+
 updater = Updater(TOKEN, use_context=True)
 dp = updater.dispatcher
 
 dp.add_handler(CommandHandler("start", start))
-dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+dp.add_handler(MessageHandler(Filters.text, handle_message))
 
-# start bot
 updater.start_polling()
 updater.idle()
