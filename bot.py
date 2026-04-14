@@ -1,8 +1,7 @@
 import requests
 import time
-from telegram import Bot
-
 import os
+from telegram import Bot
 
 TOKEN = os.getenv("TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
@@ -17,32 +16,22 @@ def get_price():
 def get_signal(price):
     if price > 75000:
         return "BUY", "Breakout above resistance"
-    elif price < 74400:
+    elif price < 74000:
         return "SELL", "Breakdown below support"
     else:
         return "WAIT", "Market sideways"
 
-def send_signal():
-    price = get_price()
-    action, reason = get_signal(price)
-
-    message = f"""
-🚨 BTC SIGNAL
-
-Price: {price}
-
-ACTION: {action}
-
-WHY:
-- {reason}
-
-PLAN:
-SL: Manage risk
-Target: Momentum based
-"""
-
-    bot.send_message(chat_id=CHAT_ID, text=message)
-
 while True:
-    send_signal()
-    time.sleep(60)
+    try:
+        price = get_price()
+        signal, reason = get_signal(price)
+
+        message = f"BTC Price: {price}\nSignal: {signal}\nReason: {reason}"
+
+        bot.send_message(chat_id=CHAT_ID, text=message)
+
+        time.sleep(60)
+
+    except Exception as e:
+        print(e)
+        time.sleep(10)
