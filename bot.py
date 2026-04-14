@@ -6,9 +6,9 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 TOKEN = os.getenv("TOKEN")
 
 def get_price():
-    url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
+    url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
     data = requests.get(url).json()
-    return float(data["price"])
+    return float(data["bitcoin"]["usd"])
 
 def get_signal(price):
     if price > 75000:
