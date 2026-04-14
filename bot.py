@@ -33,7 +33,7 @@ def handle_message(update: Update, context: CallbackContext):
         update.message.reply_text(message)
 
     except Exception as e:
-        update.message.reply_text("Error occurred")
+        update.message.reply_text(f"Error: {str(e)}")
 
 updater = Updater(TOKEN, use_context=True)
 dp = updater.dispatcher
